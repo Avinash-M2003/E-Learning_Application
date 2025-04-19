@@ -1,0 +1,66 @@
+package com.excelr.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.excelr.model.Course;
+import com.excelr.repo.CourseRepo;
+import com.excelr.util.S3Util;
+
+@Service
+public class CourseService {
+
+    @Autowired
+    private CourseRepo courseRepo;
+
+    @Autowired
+    private S3Util s3Util;
+
+    public ResponseEntity<List<Course>> getAllCourses() {
+        return ResponseEntity.ok(courseRepo.findAll());
+    }
+
+    public ResponseEntity<?> getCourseById(Integer id) {
+        return courseRepo.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    public Course createCourse(Course course, MultipartFile image) {
+        if (image != null && !image.isEmpty()) {
+            String uploadedImageUrl = s3Util.uploadImage(image);
+            course.setImage(uploadedImageUrl);
+        }
+        return courseRepo.save(course);
+    }
+
+    public ResponseEntity<Course> updateCourse(Integer id, Course updatedCourse, MultipartFile newImage) {
+        return courseRepo.findById(id).map(course -> {
+            course.setName(updatedCourse.getName());
+            course.setDescription(updatedCourse.getDescription());
+            course.setPrice(updatedCourse.getPrice());
+
+            if (newImage != null && !newImage.isEmpty()) {
+                String updatedUrl = s3Util.updateImage(course.getImage(), newImage);
+                course.setImage(updatedUrl);
+            }
+
+            return ResponseEntity.ok(courseRepo.save(course));
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    public ResponseEntity<?> deleteCourse(Integer id) {
+        return courseRepo.findById(id).map(course -> {
+            if (course.getImage() != null) {
+                s3Util.deleteImage(course.getImage());
+            }
+            courseRepo.deleteById(id);
+            return ResponseEntity.ok("deleted sucessfully");
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+}

@@ -1,0 +1,69 @@
+package com.excelr.service;
+
+import java.util.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.excelr.model.Enrolled;
+import com.excelr.repo.EnrolledRepo;
+
+@Service
+public class EnrolledService {
+
+    @Autowired
+    private EnrolledRepo enrolledRepo;
+
+    public ResponseEntity<List<Enrolled>> getAllEnrollments() {
+        return ResponseEntity.ok(enrolledRepo.findAll());
+    }
+
+    public ResponseEntity<?> getEnrollmentById(Integer id) {
+        return enrolledRepo.findById(id)
+                .map(enrolled -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("enrollment", enrolled);
+                    return ResponseEntity.ok(response);
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Enrollment not found"));
+    }
+
+    public ResponseEntity<Enrolled> createEnrollment(Enrolled enrolled) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(enrolledRepo.save(enrolled));
+    }
+
+    public ResponseEntity<?> updateEnrollment(Integer id, Enrolled updated) {
+        Optional<Enrolled> enrolledOpt = enrolledRepo.findById(id);
+        if (enrolledOpt.isPresent()) {
+            Enrolled enrolled = enrolledOpt.get();
+            enrolled.setCourse(updated.getCourse());
+            enrolled.setBatch(updated.getBatch());
+            enrolled.setUser(updated.getUser());
+            enrolled.setProgress(updated.getProgress());
+            enrolled.setEnrolledAt(updated.getEnrolledAt());
+            enrolledRepo.save(enrolled);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("enrollment", enrolledRepo.findById(id).orElse(null));
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Enrollment not found");
+        }
+    }
+
+    public ResponseEntity<?> deleteEnrollment(Integer id) {
+        Optional<Enrolled> enrolledOpt = enrolledRepo.findById(id);
+        if (enrolledOpt.isPresent()) {
+            enrolledRepo.deleteById(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Enrollment deleted successfully");
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Enrollment not found");
+        }
+    }
+
+}
+

@@ -1,0 +1,59 @@
+package com.excelr.service;
+
+import java.util.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.excelr.model.Batch;
+import com.excelr.repo.BatchRepo;
+import com.excelr.repo.CourseRepo;
+
+@Service
+public class BatchService {
+
+    @Autowired
+    private BatchRepo batchRepo;
+
+    @Autowired
+    private CourseRepo courseRepo;
+
+    public ResponseEntity<List<Batch>> getAllBatches() {
+        return ResponseEntity.ok(batchRepo.findAll());
+    }
+
+    public ResponseEntity<?> getBatchById(Integer id) {
+        Optional<Batch> optionalBatch = batchRepo.findById(id);
+        if (optionalBatch.isPresent()) {
+            Batch batch = optionalBatch.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("batch", batch);
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No resource available");
+        }
+    }
+
+
+    public ResponseEntity<Batch> createBatch(Batch batch) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(batchRepo.save(batch));
+    }
+
+    public ResponseEntity<?> updateBatch(Integer id, Batch updatedBatch) {
+        return batchRepo.findById(id).map(batch -> {
+            batch.setName(updatedBatch.getName());
+            batch.setTimmings(updatedBatch.getTimmings());
+            batch.setCourse(updatedBatch.getCourse());
+            return ResponseEntity.ok(batchRepo.save(batch));
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Batch not found"));
+    }
+
+    public ResponseEntity<?> deleteBatch(Integer id) {
+        return batchRepo.findById(id).map(batch -> {
+            batchRepo.deleteById(id);
+            return ResponseEntity.ok("Batch deleted successfully");
+        }).orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Batch not found"));
+    }
+}
