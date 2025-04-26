@@ -39,7 +39,7 @@ public class CourseService {
 
     public Course createCourse(Course course, MultipartFile image) {
         if (image != null && !image.isEmpty()) {
-            String uploadedImageUrl = s3Util.uploadImage(image);
+            String uploadedImageUrl = s3Util.uploadFile(image);
             course.setImage(uploadedImageUrl);
         }
         return courseRepo.save(course);
@@ -51,7 +51,7 @@ public class CourseService {
             Course course = courseOpt.get();
 
             if (newImage != null && !newImage.isEmpty()) {
-                String imageUrl = s3Util.updateImage(course.getImage(), newImage);
+                String imageUrl = s3Util.updateFile(course.getImage(), newImage);
                 course.setImage(imageUrl);
             }
 
@@ -73,7 +73,7 @@ public class CourseService {
     public ResponseEntity<?> deleteCourse(Integer id) {
         return courseRepo.findById(id).map(course -> {
             if (course.getImage() != null) {
-                s3Util.deleteImage(course.getImage());
+                s3Util.deleteFile(course.getImage());
             }
             courseRepo.deleteById(id);
             return ResponseEntity.ok("deleted sucessfully");

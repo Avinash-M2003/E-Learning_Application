@@ -1,8 +1,10 @@
 package com.excelr.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.excelr.model.Session;
 import com.excelr.service.SessionService;
@@ -23,15 +25,17 @@ public class SessionController {
         return sessionService.getSessionById(id);
     }
 
-    @PostMapping("/api/session")
-    public ResponseEntity<?> createSession(@RequestBody Session session) {
-        return sessionService.createSession(session);
+    @PostMapping(value="/api/session", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createSession(@RequestPart Session session, 
+    									   @RequestPart("video") MultipartFile videoFile) {
+        return sessionService.createSession(session, videoFile);
     }
 
-    @PutMapping("/api/session/{id}")
+    @PutMapping(value= "/api/session/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateSession(@PathVariable Integer id,
-                                           @RequestBody Session session) {
-        return sessionService.updateSession(id, session);
+                                           @RequestPart Session session,
+                                           @RequestPart("video") MultipartFile videoFile) {
+        return sessionService.updateSession(id, session, videoFile);
     }
 
     @DeleteMapping("/api/session/{id}")

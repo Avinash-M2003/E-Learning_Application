@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -19,111 +18,127 @@ import java.util.UUID;
 
 @Service
 public class S3Util {
-    
+
     @Autowired
     private S3Client s3Client;
-    
+
     @Value("${aws.s3.bucket.name}")
     private String bucketName;
-    
-    // Maximum file size: 5MB
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-    
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
-            ".jpg", ".jpeg", ".png"
-    );
-    
-    public String uploadImage(MultipartFile file) {
+
+    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+    private static final List<String> IMAGE_EXTENSIONS = Arrays.asList(".jpg", ".jpeg", ".png");
+    private static final List<String> VIDEO_EXTENSIONS = Arrays.asList(".mp4", ".mov", ".avi", ".mkv", ".webm");
+
+    public String uploadFile(MultipartFile file) {
         validateFile(file);
-        
+
         try {
             String originalFilename = file.getOriginalFilename();
             String sanitizedFilename = originalFilename.replace(" ", "");
             String fileName = UUID.randomUUID() + "_" + sanitizedFilename;
-            
-            // Determine content type
+
             String contentType = file.getContentType();
             if (contentType == null) {
-                contentType = originalFilename.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+                contentType = guessContentType(originalFilename);
             }
-            
-            // Upload to S3
+
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(fileName)
-                .contentType(contentType)
-                .build();
-                
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(contentType)
+                    .build();
+
             s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
-            
-            // Generate and return the S3 URL
+
             return String.format("https://%s.s3.amazonaws.com/%s", bucketName, fileName);
-            
+
         } catch (IOException e) {
             throw new RuntimeException("Error uploading file to S3: " + e.getMessage());
         }
     }
-    
-    public void deleteImage(String imageUrl) {
-        if (imageUrl == null || !imageUrl.contains(bucketName)) {
-            return;
-        }
-        
+
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || !fileUrl.contains(bucketName)) return;
+
         try {
-            String key = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
-            
+            String key = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .build();
-                
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
             s3Client.deleteObject(deleteObjectRequest);
-            
+
         } catch (Exception e) {
             throw new RuntimeException("Error deleting file from S3: " + e.getMessage());
         }
     }
-    
-    public String updateImage(String existingImageUrl, MultipartFile newImage) {
-        validateFile(newImage);
-        
-        // Delete existing image if present
-        if (existingImageUrl != null) {
-            deleteImage(existingImageUrl);
+
+    public String updateFile(String existingFileUrl, MultipartFile newFile) {
+        validateFile(newFile);
+
+        if (existingFileUrl != null) {
+            deleteFile(existingFileUrl);
         }
-        
-        // Upload new image
-        return uploadImage(newImage);
+
+        return uploadFile(newFile);
     }
-    
+
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File cannot be empty");
         }
-        
-        // Check file size
+
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("File too large. Max size is 5MB");
+            throw new IllegalArgumentException("File too large. Max size is 100MB");
         }
-        
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !isValidFileType(originalFilename)) {
-            throw new IllegalArgumentException("Unsupported file type. Allowed types: jpg, jpeg, png");
+
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!isImageFile(filename) && !isVideoFile(filename))) {
+            throw new IllegalArgumentException("Unsupported file type. Only images and videos are allowed.");
         }
-        
-        // Validate that it's actually an image
-        try {
-            BufferedImage bufferedImage = ImageIO.read(file.getInputStream());
-            if (bufferedImage == null) {
-                throw new IllegalArgumentException("Invalid image file");
+
+        // Validate images using ImageIO
+        if (isImageFile(filename)) {
+            try {
+                BufferedImage image = ImageIO.read(file.getInputStream());
+                if (image == null) {
+                    throw new IllegalArgumentException("Invalid image file");
+                }
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Error reading image file");
             }
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Error processing image file");
+        }
+
+        // Validate videos based on MIME type
+        if (isVideoFile(filename)) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("video/")) {
+                throw new IllegalArgumentException("Invalid video file. Must be a recognized video format.");
+            }
         }
     }
-    
-    private boolean isValidFileType(String filename) {
-        return ALLOWED_EXTENSIONS.stream()
+
+    private boolean isImageFile(String filename) {
+        return IMAGE_EXTENSIONS.stream()
                 .anyMatch(ext -> filename.toLowerCase().endsWith(ext));
+    }
+
+    private boolean isVideoFile(String filename) {
+        return VIDEO_EXTENSIONS.stream()
+                .anyMatch(ext -> filename.toLowerCase().endsWith(ext));
+    }
+
+    private String guessContentType(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".mp4")) return "video/mp4";
+        if (lower.endsWith(".mov")) return "video/quicktime";
+        if (lower.endsWith(".avi")) return "video/x-msvideo";
+        if (lower.endsWith(".webm")) return "video/webm";
+        if (lower.endsWith(".mkv")) return "video/x-matroska";
+        return "application/octet-stream";
     }
 }

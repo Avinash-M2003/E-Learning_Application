@@ -1,0 +1,70 @@
+package com.excelr.service;
+
+import java.util.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.excelr.model.Session;
+import com.excelr.repo.SessionRepo;
+
+@Service
+public class SessionService {
+
+    @Autowired
+    private SessionRepo sessionRepo;
+
+    public ResponseEntity<List<Session>> getAllSessions() {
+        return ResponseEntity.ok(sessionRepo.findAll());
+    }
+
+    public ResponseEntity<?> getSessionById(Integer id) {
+        Optional<Session> sessionOpt = sessionRepo.findById(id);
+        if (sessionOpt.isPresent()) {
+            Session session = sessionOpt.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("session", session);
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Session not found");
+        }
+    }
+
+
+    public ResponseEntity<Session> createSession(Session session) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(sessionRepo.save(session));
+    }
+
+    public ResponseEntity<?> updateSession(Integer id, Session updatedSession) {
+        Optional<Session> sessionOpt = sessionRepo.findById(id);
+        if (sessionOpt.isPresent()) {
+            Session session = sessionOpt.get();
+            session.setTitle(updatedSession.getTitle());
+            session.setVideoUrl(updatedSession.getVideoUrl());
+            session.setCourse(updatedSession.getCourse());
+            session.setBatch(updatedSession.getBatch());
+            sessionRepo.save(session);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("session", sessionRepo.findById(id).orElse(null));
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Session not found");
+        }
+    }
+
+    public ResponseEntity<?> deleteSession(Integer id) {
+        Optional<Session> sessionOpt = sessionRepo.findById(id);
+        if (sessionOpt.isPresent()) {
+            sessionRepo.deleteById(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Session deleted successfully");
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Session not found");
+        }
+    }
+
+}

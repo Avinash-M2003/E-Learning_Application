@@ -1,0 +1,43 @@
+spring.application.name=E-LearningAppl
+spring.datasource.url=jdbc:mysql://localhost:3306/elearn_db
+spring.datasource.username=Avinash
+spring.datasource.password=Paddu123
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+server.port=8081
+
+aws.s3.bucket.name=
+aws.s3.region=
+aws.accessKeyId=
+aws.secretAccessKey=
+
+razorpay.key.id=
+razorpay.key.secret=
+
+# Kafka server (adjust if using Confluent or Docker)
+spring.kafka.bootstrap-servers=localhost:9092
+
+# Consumer settings
+spring.kafka.consumer.group-id=excelr-group
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+# Producer settings
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+
+#spring.security.oauth2.client.registration.google.client-id=
+#spring.security.oauth2.client.registration.google.client-secret=
+#spring.security.oauth2.client.registration.google.redirect-uri=
+#spring.security.oauth2.client.registration.google.scope=
+#spring.security.oauth2.client.provider.google.authorization-uri=
+#spring.security.oauth2.client.provider.google.token-uri=
+#spring.security.oauth2.client.provider.google.user-info-uri=
+
+#logging.level.=DEBUG
+#spring.sql.init.mode=always
+#spring.sql.init.platform=mysql
